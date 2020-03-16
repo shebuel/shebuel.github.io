@@ -1,2 +1,69 @@
-theme: jekyll-theme-tactile
-title: Welcome to Shebuel's Blog
+# Site setings
+name: 'Shebuel Asher Paul'
+description: 'Security Analyst'
+meta_description: 'A personal Blog where I go into my research in Infosec'
+logo:
+# Author image is used in site sidebar and greetings in the home page hero text
+author:
+  image: 'websiteImageDP.jpg'
+  greetings: "Welcome to Infosec Frenzy. A site where I post my research, thoughts and ideas relating to Infosec. Hope you enjoy!"
+favicon: 'assets/images/favicon1.ico'
+baseurl: 
+production_url: https://royce.netlify.com/
+disqus: ''
+#mailchimp_url: '//justgoodthemes.us3.list-manage.com/subscribe/post?u=78f1bab16028354caeb23aecd&amp;id=4a7330d117'
+# Add your GA Tracking Id
+ga_analytics: 
+
+# Contact form setings
+email: jshebuel.infosec@gmail.com
+contact_page_description: "If you have any questions or would like to collab or just chat in general I shall try my best to respond ASAP :)"
+thankyou_page_description: "Your message has been successfully sent. I will contact you very soon!"
+
+# Social links
+twitter: 'jshebuel'
+linkedin: 'shebuel'
+github: 'shebuel'
+instagram: 'shebuel_ash3r'
+facebook: 
+codepen: 
+dribbble: 
+medium: 
+pinterest: 
+producthunt: 
+quora: 
+
+# Navigation
+navigation:
+  - text: Home
+    url: /
+  - text: About
+    url: /about
+  - text: Style Guide
+    url: /style-guide
+  - text: Contact Me
+    url: /contact
+  - text: Search
+    url: /search
+
+# Required Plugins
+plugins_dir:
+  - jekyll-paginate
+  - jekyll-tagsgenerator
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+# Pagination
+paginate: 5
+paginate_path: /page:num/
+
+# Permalinks
+permalink: /:title
+
+# Other
+markdown: kramdown
+
+# Sass
+sass:
+  sass_dir: _sass
+  style: compressed
