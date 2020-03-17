@@ -1,7 +1,7 @@
 ---
 layout: page
 title: About
-featured_image: /assets/images/pages/aboutImage.jpg
+featured_image: /assets/images/pages/aboutImagev2.jpg
 ---
 
 Shebuel Asher Paul J is currently a graduate **Cybersecurity** student in the University of Maryland. He has an avid interest in blue teaming and specializes in DFIR and reverse engineering. 
