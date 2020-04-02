@@ -31,4 +31,16 @@ Well to put it bluntly... It's because attackers are lazy. They do not want to p
 
 That is a very simplistic example but provides that gist of why deception technology is so effective. The file with the canary token can be easily swapped out with a dedicated misconfigured network or an user account with a easy to crack password. It can also be servers that spam misinformation in the network which makes it hard for the attacker to distinguish between what is real and what's not. Any method that makes it harder for the attacker is a win for us.
 
+## So how do I get started...
 
+As I mentioned previously getting started with Deception techniques does not need to be super complicated. It can be as simple as a [canarytoken](https://canarytokens.org/).
+
+{% include image-caption.html imageurl="assets/images/posts/2020/Selection_001.png" title="Canary Token" caption="A screenshot of the canarytokens homepage" %}
+
+For this example, we are just going with the easiest option and choose a word document. In the next screen, we provide the email id to which the alert will be sent to and an alert message to recognize which token produced the alert.
+
+{% include image-caption.html imageurl="assets/images/posts/2020/Selection_002.png" title="Canary Token" caption="A screenshot of the canarytokens homepage" %}
+
+And finally, when some unsuspecting attacker happens to open it, you immediately get an alert in the email id provided with the attacker's IP address.
+
+John Strand from Black Hills information security has a wonderful video about getting started with Cyber Deception which can be found here : [Getting started with Cyber Deception](https://youtu.be/cCxbBz1UbnA)
