@@ -5,8 +5,8 @@
     <description>Security Analyst</description>
     <link>http://localhost:4000/</link>
     <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Wed, 22 Apr 2020 12:22:58 -0700</pubDate>
-    <lastBuildDate>Wed, 22 Apr 2020 12:22:58 -0700</lastBuildDate>
+    <pubDate>Wed, 22 Apr 2020 14:19:21 -0700</pubDate>
+    <lastBuildDate>Wed, 22 Apr 2020 14:19:21 -0700</lastBuildDate>
     <generator>Jekyll v4.0.0</generator>
     
       <item>
@@ -189,16 +189,15 @@ So all thats left to do is look at the source code for the lime extractor and se
 
 &lt;p&gt;&lt;em&gt;Finally accepts his fate and compiles the config from the source code.&lt;/em&gt;&lt;/p&gt;
 
-&lt;p&gt;// The source that I am using is the one I obtained that I got by just Google searching. I think a better way to do this would have been to get the one for a Qualcomm msm chipset from the Google source. I honestly don’t know if this is going to bite me in the ass later on.&lt;/p&gt;
-
 &lt;p&gt;These are the commands I used from the source directory:&lt;/p&gt;
 
-&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;export &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;ARCH&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;arm
-&lt;span class=&quot;nb&quot;&gt;export &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;SUBARCH&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;armexport
-&lt;span class=&quot;nv&quot;&gt;CROSS_COMPILE&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$CC_PATH&lt;/span&gt;/arm-linux-androideabi-
+&lt;pre&gt;&lt;code class=&quot;language-shell&quot;&gt;
+export ARCH=arm
+export SUBARCH=armexport
+CROSS_COMPILE=$CC_PATH/arm-linux-androideabi-
 
 make hammerhead_defconfig
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;/code&gt;&lt;/pre&gt;
 
 &lt;p&gt;Now that I finally have the .config file I can follow the LiME docs again to finish my work.&lt;/p&gt;
 

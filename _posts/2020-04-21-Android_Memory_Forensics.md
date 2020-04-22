@@ -187,18 +187,15 @@ Well there is no way there is another config setting for this right? RIGHT?
 
 *Finally accepts his fate and compiles the config from the source code.*
 
-
-// The source that I am using is the one I obtained that I got by just Google searching. I think a better way to do this would have been to get the one for a Qualcomm msm chipset from the Google source. I honestly don't know if this is going to bite me in the ass later on.
-
 These are the commands I used from the source directory:
 
-```bash
+<pre><code class="language-shell">
 export ARCH=arm
 export SUBARCH=armexport
 CROSS_COMPILE=$CC_PATH/arm-linux-androideabi-
 
 make hammerhead_defconfig
-```
+</code></pre>
 
 Now that I finally have the .config file I can follow the LiME docs again to finish my work.
 

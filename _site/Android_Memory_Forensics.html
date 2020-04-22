@@ -352,16 +352,15 @@ So all thats left to do is look at the source code for the lime extractor and se
 
 <p><em>Finally accepts his fate and compiles the config from the source code.</em></p>
 
-<p>// The source that I am using is the one I obtained that I got by just Google searching. I think a better way to do this would have been to get the one for a Qualcomm msm chipset from the Google source. I honestly don’t know if this is going to bite me in the ass later on.</p>
-
 <p>These are the commands I used from the source directory:</p>
 
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">ARCH</span><span class="o">=</span>arm
-<span class="nb">export </span><span class="nv">SUBARCH</span><span class="o">=</span>armexport
-<span class="nv">CROSS_COMPILE</span><span class="o">=</span><span class="nv">$CC_PATH</span>/arm-linux-androideabi-
+<pre><code class="language-shell">
+export ARCH=arm
+export SUBARCH=armexport
+CROSS_COMPILE=$CC_PATH/arm-linux-androideabi-
 
 make hammerhead_defconfig
-</code></pre></div></div>
+</code></pre>
 
 <p>Now that I finally have the .config file I can follow the LiME docs again to finish my work.</p>
 
@@ -430,7 +429,7 @@ su
     <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
 </section><!-- .comments-area -->
 <script type="text/javascript">
-    var disqus_shortname = '';
+    var disqus_shortname = 'shebuel-github-io';
     var disqus_developer = 0;
     (function () {
         var dsq = document.createElement('script');
