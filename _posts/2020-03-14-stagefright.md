@@ -4,7 +4,7 @@ date: 2020-03-14
 title: 'StageFright vulnerability in Android'
 tags: [Reverese Engineering, Android, Vulnerability]
 featured_image_thumbnail:
-featured_image: assets/images/posts/2020/android.jpg
+featured_image: assets/images/posts/2020/Stagefright_bug_logo.png
 featured: true
 ---
 

@@ -4,7 +4,7 @@ title: 'CTF Writeups'
 tags: [CTF, Writeups]
 featured_image_thumbnail:
 featured_image: assets/images/posts/2020/ctf.jpg
-
+hidden: true
 ---
 This is where I post the writeups of all the CTFs that I have did along with what I learnt doing each of them and what challenged me the most about them.
 

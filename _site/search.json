@@ -1,6 +1,14 @@
 [
   
     {
+      "title"    : "Android Memory Forensics",
+      "category" : "",
+      "tags"     : "Android, Memory Forensics",
+      "url"      : "/Android_Memory_Forensics",
+      "date"     : "April 21, 2020"
+    } ,
+  
+    {
       "title"    : "Deception in Cybersecurity",
       "category" : "",
       "tags"     : "Cybersecurity, Deception, Defense",

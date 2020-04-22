@@ -6,7 +6,7 @@ logo:
 # Author image is used in site sidebar and greetings in the home page hero text
 author:
   image: 'websiteImageDP.jpg'
-  greetings: "Welcome to Infosec Frenzy. A site where I post my research, thoughts and ideas relating to Infosec. Hope you enjoy!"
+  greetings: "Welcome to my virtual world! A world where I push my research, thoughts and ideas relating to Infosec. Hope you enjoy!"
 favicon: 'assets/images/favicon1.ico'
 baseurl: 
 production_url: https://royce.netlify.com/

@@ -5,8 +5,7 @@ title: 'Secure migration of a server to the Cloud'
 tags: [AWS, CloudSec, Docs]
 featured_image_thumbnail:
 featured_image: assets/images/posts/2020/cloud.jpg
-featured: true
-hidden: true
+
 ---
 
 *I have yet to convert this to a format where I can directly post it to my site so I have just linked it to the actual documentation that I had prepared*

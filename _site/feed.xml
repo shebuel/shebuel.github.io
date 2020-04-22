@@ -5,9 +5,259 @@
     <description>Security Analyst</description>
     <link>http://localhost:4000/</link>
     <atom:link href="http://localhost:4000/feed.xml" rel="self" type="application/rss+xml"/>
-    <pubDate>Wed, 01 Apr 2020 16:30:00 -0700</pubDate>
-    <lastBuildDate>Wed, 01 Apr 2020 16:30:00 -0700</lastBuildDate>
+    <pubDate>Wed, 22 Apr 2020 12:22:58 -0700</pubDate>
+    <lastBuildDate>Wed, 22 Apr 2020 12:22:58 -0700</lastBuildDate>
     <generator>Jekyll v4.0.0</generator>
+    
+      <item>
+        <title>Android Memory Forensics</title>
+        <description>&lt;p&gt;&lt;em&gt;&lt;strong&gt;Disclaimer&lt;/strong&gt;:
+This post is either a very good or a horrible representation of my writing skills depending on how much you like it&lt;/em&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;memory-forensics&quot;&gt;Memory Forensics:&lt;/h2&gt;
+
+&lt;p&gt;Memory forensics is essentially just a subset in the computer forensic field where the goal is to focus on the contents of snapshot of memory (RAM) rather than the contents of the hard disk. Memory forensics has its own set of difficulties the worst of which is that the content in memory is volatile meaning once the machine loses power all the contents of memory are pretty much gone for good (Unless you manage to instantly freeze but I am not sure about the science behind that). Memory forensics has been gaining a lot of traction recently mostly due to the fact that there are a lot more memory resident malware and memory resided data often provide a fresh real-time perspective to an investigation case.&lt;/p&gt;
+
+&lt;h2 id=&quot;memory-forensics-in-android-devices&quot;&gt;Memory forensics in android devices:&lt;/h2&gt;
+
+&lt;p&gt;Android which is currently the most popular mobile OS is a framework which runs on top of the Linux kernel. So many things that apply to UNIX systems also apply to Android except the way that applications are run (used to be Dalvik VMs, now Android Run Time (ART) environment). The important thing in regards to this project is that Android similar to Linux allows for loadable kernel modules (LKMs). (&lt;em&gt;My future self: “Oh my sweet summer child”&lt;/em&gt;)&lt;/p&gt;
+
+&lt;p&gt;Ways to extract memory&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;/dev/(k)mem&lt;/li&gt;
+  &lt;li&gt;Fmem&lt;/li&gt;
+  &lt;li&gt;Crash&lt;/li&gt;
+  &lt;li&gt;Wont get into the hardware ways (Jtag maybe be a possible way but hard to get to w/o removing the battery)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;There is a very good presentation from the creators of the tool that I am about to use which you can find &lt;a href=&quot;https://www.youtube.com/watch?v=oWkOyphlmM8&quot;&gt;here&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;my-test-environment&quot;&gt;My test environment&lt;/h2&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Nexus 5
+    &lt;ul&gt;
+      &lt;li&gt;Android 6.0.1 (Latest update, EOL)&lt;/li&gt;
+      &lt;li&gt;kernel version is 3.4.0-gcf10b7e&lt;/li&gt;
+      &lt;li&gt;Rooted&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;SIFT Workstation
+    &lt;ul&gt;
+      &lt;li&gt;Volatility&lt;/li&gt;
+      &lt;li&gt;Ubuntu 14.04&lt;/li&gt;
+      &lt;li&gt;Kernel 4.4.0-177-generic&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+  &lt;li&gt;USB to Micro USB cable&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Okay. I know what you are thinking. Hey Sheb, that’s kind of convenient that the phone that you are trying to analyze is just randomly rooted and I agree. What are the odds right. I guess I am just that lucky. *wink* *wink*&lt;/p&gt;
+
+&lt;p&gt;The reason I chose the SIFT workstation is only because it had Volatility pre-installed and I wouldn’t need to setup anything. That being said the steps should be similar in any other Linux machine I think.&lt;/p&gt;
+
+&lt;h2 id=&quot;lime&quot;&gt;LiME&lt;/h2&gt;
+
+&lt;p&gt;LiME extractor is what I am going to be using for extracting the memory for analysis.&lt;/p&gt;
+
+&lt;p&gt;Just from reading the documentation and having a quick look at the video this is what I learned…&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;LiME uses loadable kernel modules to load a kernel module directly into a running system (Duh!)&lt;/li&gt;
+  &lt;li&gt;Once the kernel is loaded the kernel checks the /proc/iomem to figure out the location of the “System RAM” and then uses that physical memory address to carve it out.&lt;/li&gt;
+  &lt;li&gt;It then sends the data back to the TCP port that was setup when making the kernel module or stores it in the certain location in the SD card.&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;I think one of the best things I learned in life is from &lt;a href=&quot;https://ippsec.rocks/#&quot;&gt;Ippsec&lt;/a&gt;. It is to have a good understanding of the tools that you use so that If you are in a pinch and do not have access to the tools you can create a rudimentary version yourself.
+So all thats left to do is look at the source code for the lime extractor and see if I have guessed everything right… This should be fun ( I meant that in the most sarcastic way possible… End my life already)&lt;/p&gt;
+
+&lt;p&gt;The following code found in main.c of the lime iterated through all the entries in /proc/iomem and if the name is “System RAM” then see whether the user selected Lime format or the padded format and creates the respective header and then copies the pages represented by that memory range using the &lt;code class=&quot;highlighter-rouge&quot;&gt;write_range()&lt;/code&gt; function.&lt;/p&gt;
+
+&lt;div class=&quot;language-c highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;p&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;iomem_resource&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;p&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;p&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;p&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sibling&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+
+        &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;strcmp&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;p&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;LIME_RAMSTR&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+            &lt;span class=&quot;k&quot;&gt;continue&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+        &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;mode&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;LIME_MODE_LIME&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;write_lime_header&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;p&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;DBG&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Error writing header 0x%lx - 0x%lx&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;long&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;p&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;long&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;p&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;end&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+            &lt;span class=&quot;k&quot;&gt;break&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;mode&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;LIME_MODE_PADDED&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;write_padding&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;size_t&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;p&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;start&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;p_last&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;DBG&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Error writing padding 0x%lx - 0x%lx&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;long&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;p_last&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;long&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;p&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;start&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+            &lt;span class=&quot;k&quot;&gt;break&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+        &lt;span class=&quot;n&quot;&gt;write_range&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;p&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;The structure for &lt;code class=&quot;highlighter-rouge&quot;&gt;iomem_resource&lt;/code&gt; can be found in resource.h&lt;/p&gt;
+
+&lt;div class=&quot;language-c highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;struct&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;resource&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;iomem_resource&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+   &lt;span class=&quot;mi&quot;&gt;36&lt;/span&gt;     &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;   &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;PCI mem&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+   &lt;span class=&quot;mi&quot;&gt;37&lt;/span&gt;     &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;start&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+   &lt;span class=&quot;mi&quot;&gt;38&lt;/span&gt;     &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;end&lt;/span&gt;    &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+   &lt;span class=&quot;mi&quot;&gt;39&lt;/span&gt;     &lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;flags&lt;/span&gt;  &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;IORESOURCE_MEM&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;
+   &lt;span class=&quot;mi&quot;&gt;40&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;language-c highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;k&quot;&gt;struct&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;resource&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;resource_size_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;resource_size_t&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;end&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;const&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;char&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;name&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;kt&quot;&gt;unsigned&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;long&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;flags&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;struct&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;resource&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;parent&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;sibling&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;child&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;The &lt;code class=&quot;highlighter-rouge&quot;&gt;write_range()&lt;/code&gt; function gets a resource structure and checks if the page is the same as the page size or it needs to be padded. It then calls the &lt;code class=&quot;highlighter-rouge&quot;&gt;write_vaddr()&lt;/code&gt; function which in turn calls the &lt;code class=&quot;highlighter-rouge&quot;&gt;write_vaddr_tcp()&lt;/code&gt; or the &lt;code class=&quot;highlighter-rouge&quot;&gt;write_vaddr_disk()&lt;/code&gt; function based on how the memory is to be stored.&lt;/p&gt;
+
+&lt;div class=&quot;language-c highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt; &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;no_overlap&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+                &lt;span class=&quot;n&quot;&gt;copy_page&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;vpage&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+                &lt;span class=&quot;n&quot;&gt;s&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;write_vaddr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;vpage&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;is&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+            &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;else&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+                &lt;span class=&quot;n&quot;&gt;s&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;write_vaddr&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;is&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+            &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;^ Code from &lt;code class=&quot;highlighter-rouge&quot;&gt;write_range()&lt;/code&gt; function&lt;/p&gt;
+
+&lt;div class=&quot;language-c highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;cm&quot;&gt;/* Run deflate() on input until output buffer is not full. */&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;ret&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;try_write&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;deflate_page_buf&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;deflate&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;is&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;));&lt;/span&gt;
+            &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ret&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+                &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ret&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;while&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ret&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;PAGE_SIZE&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;^ Code from &lt;code class=&quot;highlighter-rouge&quot;&gt;write_vaddr()&lt;/code&gt; function&lt;/p&gt;
+
+&lt;div class=&quot;language-c highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt; &lt;span class=&quot;n&quot;&gt;ret&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;RETRY_IF_INTERRUPTED&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;method&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;==&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;LIME_METHOD_TCP&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;?&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;write_vaddr_tcp&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;is&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;write_vaddr_disk&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;v&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;is&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;^ Code from &lt;code class=&quot;highlighter-rouge&quot;&gt;try_write()&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;I spent like 5 hours analyzing all the code ( I have never made a Kernel module before) and then realized that “The Art of Memory Forensics” has already explained the code in its notes section. Currently reconsidering life decisions. Send help!&lt;/p&gt;
+
+&lt;h2 id=&quot;memory-extraction&quot;&gt;Memory Extraction:&lt;/h2&gt;
+
+&lt;h3 id=&quot;obtaining-the-kernel-config&quot;&gt;Obtaining the kernel config:&lt;/h3&gt;
+
+&lt;p&gt;So getting the kernel config sounded super easy when looking at the lime documentation but it actually turned out much harder than I expected.&lt;/p&gt;
+
+&lt;p&gt;So this is what the lime documentation has to say about obtaining the kernel config&lt;/p&gt;
+
+&lt;p&gt;Installed the prerequisites, downloaded the NDK from &lt;a href=&quot;https://github.com/android/ndk/wiki/Unsupported-Download&quot;&gt;here&lt;/a&gt; and downloaded the SDK and kernel from official android source. I just created a file with all of the paths just so the I can source it from there every time. My source file looked something like this…&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/posts/2020/exports.png&quot; alt=&quot;exports&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;We must then retrieve and copy the kernel config from our device. As per the LiME docs,&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;cd&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;$SDK_PATH&lt;/span&gt;/platform-tools
+./adb pull /proc/config.gz
+&lt;span class=&quot;nb&quot;&gt;gunzip&lt;/span&gt; ./config.gz
+&lt;span class=&quot;nb&quot;&gt;cp &lt;/span&gt;config &lt;span class=&quot;nv&quot;&gt;$KSRC_PATH&lt;/span&gt;/.config
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;Simple enough… So lets try that..&lt;/p&gt;
+
+&lt;p&gt;Hmm… Thats strange… That file does not exist… *&lt;em&gt;Spends 30 mins spell checking and finds nothing&lt;/em&gt;*&lt;/p&gt;
+
+&lt;p&gt;So time to Google…&lt;/p&gt;
+
+&lt;p&gt;I found out that only kernels that are configured with the &lt;code class=&quot;highlighter-rouge&quot;&gt;CONFIG_IKCONFIG&lt;/code&gt; or the &lt;code class=&quot;highlighter-rouge&quot;&gt;CONFIG_IKCONFIG_PROC&lt;/code&gt; ( Which are usually not enabled by default ) are enabled will have the the config available in /proc/config.gz.&lt;/p&gt;
+
+&lt;p&gt;Some phones also have the config.gz stored in /vendor/kernel so be sure to check that out too.&lt;/p&gt;
+
+&lt;p&gt;I also find that devices which have CWM (clockworkmod) have that configuration enabled by default. It’s kind of hard to assume that the suspect who I want to analyze is the same amount of a nerd I am and has modded his phone. Apparently some Xperia phones and a lot of Huawei phones also have it enabled by default. So if that’s what you have to analyze you are in luck. Must. Be. Nice.&lt;/p&gt;
+
+&lt;p&gt;Okay, this is going to be a little more complicated than I initially thought it would be…&lt;/p&gt;
+
+&lt;p&gt;At this point I should have just built the config file myself from the kernel source but I wanted to take the easy way out and just find a way to get it from the device. My argument was that “Hey, that will be the most accurate config file”. The problem with that argument was that I am using a Nexus device and that is almost always going to be built on the default config.&lt;/p&gt;
+
+&lt;p&gt;So I tried using the method that is mentioned in &lt;a href=&quot;https://jiafei427.wordpress.com/2016/11/01/how-to-extract-kernel-configuration-from-android-kernel-or-boot-img-and-build-related-kernel-for-the-device/&quot;&gt;this article&lt;/a&gt; to extract the kernel image from the device and then use the extract-ikconfig.sh found in scripts/ folder.&lt;/p&gt;
+
+&lt;p&gt;// Fun fact… U can just get the zImage of the kernel directly from android source.&lt;/p&gt;
+
+&lt;p&gt;After years of struggling I managed to obtain the boot.img file and extract the kernel image from that. Its finally time to use the script and get the kernel config.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/posts/2020/extract_ikconfig.png&quot; alt=&quot;extract-ikconfig terminal&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Well that did not go as expected… &lt;em&gt;Spends some more years making sure that he did everything right&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;Well there is no way there is another config setting for this right? RIGHT?&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/posts/2020/extract_ikconf.png&quot; alt=&quot;Extract IKconf&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;https://media.giphy.com/media/5saWnCIJL7nmU/source.gif&quot; alt=&quot;gif&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;Finally accepts his fate and compiles the config from the source code.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;// The source that I am using is the one I obtained that I got by just Google searching. I think a better way to do this would have been to get the one for a Qualcomm msm chipset from the Google source. I honestly don’t know if this is going to bite me in the ass later on.&lt;/p&gt;
+
+&lt;p&gt;These are the commands I used from the source directory:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;export &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;ARCH&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;arm
+&lt;span class=&quot;nb&quot;&gt;export &lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;SUBARCH&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;armexport
+&lt;span class=&quot;nv&quot;&gt;CROSS_COMPILE&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;$CC_PATH&lt;/span&gt;/arm-linux-androideabi-
+
+make hammerhead_defconfig
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Now that I finally have the .config file I can follow the LiME docs again to finish my work.&lt;/p&gt;
+
+&lt;p&gt;Okay, I just have to make changed to the Makefile(as per the LiME docs) and run make. Seems simple enough.&lt;/p&gt;
+
+&lt;p&gt;I did not take a screen shot of the error but this is the error message I got:&lt;/p&gt;
+
+&lt;p&gt;“The present kernel configuration has modules disabled.Type ‘make config’ and enable loadable module support.Then build a kernel with module support enabled
+make:  [modules] Error 1”&lt;/p&gt;
+
+&lt;p&gt;I found the solution from a similar blog post to the one I am making. Wait someone already did all this work??? AHHHHHHH.&lt;/p&gt;
+
+&lt;p&gt;You can find the post &lt;a href=&quot;https://sgros-students.blogspot.com/2014/04/lime.html&quot;&gt;here&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;I just had make changes to the config file and add the following lines.&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;CONFIG_MODULES=y
+CONFIG_MODULE_UNLOAD=y
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;*&lt;em&gt;At this point I was honestly just happy to find a solution and didnt really think about what the solution did but I later realized a very big problem that I had&lt;/em&gt;*&lt;/p&gt;
+
+&lt;p&gt;Well that worked and I obtained a lime.ko file.&lt;/p&gt;
+
+&lt;p&gt;Again following the LiME docs I did the following commands to push my .ko file to the device and the load the kernel module.&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;adb push lime.ko /sdcard/lime.ko
+adb forward tcp:4444 tcp:4444
+adb shell
+su
+&lt;span class=&quot;c&quot;&gt;# insmod /sdcard/lime.ko “path=tcp:4444 format=lime”&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/posts/2020/insmod.png&quot; alt=&quot;insmod terminal image here&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Wait that’s not right… There is no way it’s a config problem again right? RIGHT?&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/posts/2020/kernel_config.png&quot; alt=&quot;Android kernel config page&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;Obviously if I had noticed what changes I am adding to the config file when making lime.ko I would have realized that for android to accept LKM it has to have those config options enabled which wasnt in the default config and obviously wouldn’t in the actual device.&lt;/p&gt;
+
+&lt;p&gt;The only method I can see working now is to flash a custom kernel with those configs enabled but that would require a reboot which kind of makes a large part of why I am doing this go down the drain.&lt;/p&gt;
+
+&lt;p&gt;So I shall end this post here. I may make another blog on playing around with volatility with an android memory capture just to see all the information that I could gain.&lt;/p&gt;
+
+&lt;p&gt;(link for ndk)[https://github.com/android/ndk/wiki/Unsupported-Download]
+~&lt;/p&gt;
+
+</description>
+        <pubDate>Tue, 21 Apr 2020 00:00:00 -0700</pubDate>
+        <link>http://localhost:4000/Android_Memory_Forensics</link>
+        <guid isPermaLink="true">http://localhost:4000/Android_Memory_Forensics</guid>
+        
+        <category>Android</category>
+        
+        <category>Memory Forensics</category>
+        
+        
+      </item>
     
       <item>
         <title>Deception in Cybersecurity</title>
