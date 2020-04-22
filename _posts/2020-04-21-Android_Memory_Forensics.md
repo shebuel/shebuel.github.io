@@ -243,12 +243,6 @@ The only method I can see working now is to flash a custom kernel with those con
 
 So I shall end this post here. I may make another blog on playing around with volatility with an android memory capture just to see all the information that I could gain.
 
-(link for ndk)[https://github.com/android/ndk/wiki/Unsupported-Download]
-~
-
-
-
-
 
 
 
