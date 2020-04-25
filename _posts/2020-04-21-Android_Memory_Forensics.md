@@ -56,7 +56,7 @@ Just from reading the documentation and having a quick look at the video this is
 * It then sends the data back to the TCP port that was setup when making the kernel module or stores it in the certain location in the SD card.
 
 I think one of the best things I learned in life is from [Ippsec](https://ippsec.rocks/#). It is to have a good understanding of the tools that you use so that If you are in a pinch and do not have access to the tools you can create a rudimentary version yourself.
-So all thats left to do is look at the source code for the lime extractor and see if I have guessed everything right... This should be fun ( I meant that in the most sarcastic way possible... End my life already)
+So all thats left to do is look at the source code for the lime extractor and see if I have guessed everything right... This should be fun ( Right?)
 
 
 The following code found in main.c of the lime iterated through all the entries in /proc/iomem and if the name is "System RAM" then see whether the user selected Lime format or the padded format and creates the respective header and then copies the pages represented by that memory range using the `write_range()` function.
