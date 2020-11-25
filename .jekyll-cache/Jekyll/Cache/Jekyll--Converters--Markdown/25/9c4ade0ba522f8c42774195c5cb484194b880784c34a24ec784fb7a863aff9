@@ -1,0 +1,233 @@
+I"�N<p><em><strong>Disclaimer</strong>:
+This post is either a very good or a horrible representation of my writing skills depending on how much you like it</em></p>
+
+<h2 id="memory-forensics">Memory Forensics:</h2>
+
+<p>Memory forensics is essentially just a subset in the computer forensic field where the goal is to focus on the contents of snapshot of memory (RAM) rather than the contents of the hard disk. Memory forensics has its own set of difficulties the worst of which is that the content in memory is volatile meaning once the machine loses power all the contents of memory are pretty much gone for good (Unless you manage to instantly freeze but I am not sure about the science behind that). Memory forensics has been gaining a lot of traction recently mostly due to the fact that there are a lot more memory resident malware and memory resided data often provide a fresh real-time perspective to an investigation case.</p>
+
+<h2 id="memory-forensics-in-android-devices">Memory forensics in android devices:</h2>
+
+<p>Android which is currently the most popular mobile OS is a framework which runs on top of the Linux kernel. So many things that apply to UNIX systems also apply to Android except the way that applications are run (used to be Dalvik VMs, now Android Run Time (ART) environment). The important thing in regards to this project is that Android similar to Linux allows for loadable kernel modules (LKMs). (<em>My future self: “Oh my sweet summer child”</em>)</p>
+
+<p>Ways to extract memory</p>
+<ul>
+  <li>/dev/(k)mem</li>
+  <li>Fmem</li>
+  <li>Crash</li>
+  <li>Wont get into the hardware ways (Jtag maybe be a possible way but hard to get to w/o removing the battery)</li>
+</ul>
+
+<p>There is a very good presentation from the creators of the tool that I am about to use which you can find <a href="https://www.youtube.com/watch?v=oWkOyphlmM8">here</a></p>
+
+<h2 id="my-test-environment">My test environment</h2>
+
+<ul>
+  <li>Nexus 5
+    <ul>
+      <li>Android 6.0.1 (Latest update, EOL)</li>
+      <li>kernel version is 3.4.0-gcf10b7e</li>
+      <li>Rooted</li>
+    </ul>
+  </li>
+  <li>SIFT Workstation
+    <ul>
+      <li>Volatility</li>
+      <li>Ubuntu 14.04</li>
+      <li>Kernel 4.4.0-177-generic</li>
+    </ul>
+  </li>
+  <li>USB to Micro USB cable</li>
+</ul>
+
+<p>Okay. I know what you are thinking. Hey Sheb, that’s kind of convenient that the phone that you are trying to analyze is just randomly rooted and I agree. What are the odds right. I guess I am just that lucky. *wink* *wink*</p>
+
+<p>The reason I chose the SIFT workstation is only because it had Volatility pre-installed and I wouldn’t need to setup anything. That being said the steps should be similar in any other Linux machine I think.</p>
+
+<h2 id="lime">LiME</h2>
+
+<p>LiME extractor is what I am going to be using for extracting the memory for analysis.</p>
+
+<p>Just from reading the documentation and having a quick look at the video this is what I learned…</p>
+
+<ul>
+  <li>LiME uses loadable kernel modules to load a kernel module directly into a running system (Duh!)</li>
+  <li>Once the kernel is loaded the kernel checks the /proc/iomem to figure out the location of the “System RAM” and then uses that physical memory address to carve it out.</li>
+  <li>It then sends the data back to the TCP port that was setup when making the kernel module or stores it in the certain location in the SD card.</li>
+</ul>
+
+<p>I think one of the best things I learned in life is from <a href="https://ippsec.rocks/#">Ippsec</a>. It is to have a good understanding of the tools that you use so that If you are in a pinch and do not have access to the tools you can create a rudimentary version yourself.
+So all thats left to do is look at the source code for the lime extractor and see if I have guessed everything right… This should be fun ( Right?)</p>
+
+<p>The following code found in main.c of the lime iterated through all the entries in /proc/iomem and if the name is “System RAM” then see whether the user selected Lime format or the padded format and creates the respective header and then copies the pages represented by that memory range using the <code class="highlighter-rouge">write_range()</code> function.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for</span> <span class="p">(</span><span class="n">p</span> <span class="o">=</span> <span class="n">iomem_resource</span><span class="p">.</span><span class="n">child</span><span class="p">;</span> <span class="n">p</span> <span class="p">;</span> <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">-&gt;</span><span class="n">sibling</span><span class="p">)</span> <span class="p">{</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">strcmp</span><span class="p">(</span><span class="n">p</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">,</span> <span class="n">LIME_RAMSTR</span><span class="p">))</span>
+            <span class="k">continue</span><span class="p">;</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">mode</span> <span class="o">==</span> <span class="n">LIME_MODE_LIME</span> <span class="o">&amp;&amp;</span> <span class="n">write_lime_header</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">DBG</span><span class="p">(</span><span class="s">"Error writing header 0x%lx - 0x%lx"</span><span class="p">,</span> <span class="p">(</span><span class="kt">long</span><span class="p">)</span> <span class="n">p</span><span class="o">-&gt;</span><span class="n">start</span><span class="p">,</span> <span class="p">(</span><span class="kt">long</span><span class="p">)</span> <span class="n">p</span><span class="o">-&gt;</span><span class="n">end</span><span class="p">);</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">mode</span> <span class="o">==</span> <span class="n">LIME_MODE_PADDED</span> <span class="o">&amp;&amp;</span> <span class="n">write_padding</span><span class="p">((</span><span class="kt">size_t</span><span class="p">)</span> <span class="p">((</span><span class="n">p</span><span class="o">-&gt;</span><span class="n">start</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">p_last</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">DBG</span><span class="p">(</span><span class="s">"Error writing padding 0x%lx - 0x%lx"</span><span class="p">,</span> <span class="p">(</span><span class="kt">long</span><span class="p">)</span> <span class="n">p_last</span><span class="p">,</span> <span class="p">(</span><span class="kt">long</span><span class="p">)</span> <span class="n">p</span><span class="o">-&gt;</span><span class="n">start</span> <span class="o">-</span> <span class="mi">1</span><span class="p">);</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="n">write_range</span><span class="p">(</span><span class="n">p</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>The structure for <code class="highlighter-rouge">iomem_resource</code> can be found in resource.h</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">resource</span> <span class="n">iomem_resource</span> <span class="o">=</span> <span class="p">{</span>
+   <span class="mi">36</span>     <span class="p">.</span><span class="n">name</span>   <span class="o">=</span> <span class="s">"PCI mem"</span><span class="p">,</span>
+   <span class="mi">37</span>     <span class="p">.</span><span class="n">start</span>  <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+   <span class="mi">38</span>     <span class="p">.</span><span class="n">end</span>    <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+   <span class="mi">39</span>     <span class="p">.</span><span class="n">flags</span>  <span class="o">=</span> <span class="n">IORESOURCE_MEM</span><span class="p">,</span>
+   <span class="mi">40</span> <span class="p">};</span>
+</code></pre></div></div>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">resource</span> <span class="p">{</span>
+        <span class="n">resource_size_t</span> <span class="n">start</span><span class="p">;</span>
+        <span class="n">resource_size_t</span> <span class="n">end</span><span class="p">;</span>
+        <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">;</span>
+        <span class="kt">unsigned</span> <span class="kt">long</span> <span class="n">flags</span><span class="p">;</span>
+        <span class="k">struct</span> <span class="n">resource</span> <span class="o">*</span><span class="n">parent</span><span class="p">,</span> <span class="o">*</span><span class="n">sibling</span><span class="p">,</span> <span class="o">*</span><span class="n">child</span><span class="p">;</span>
+    <span class="p">};</span>
+</code></pre></div></div>
+
+<p>The <code class="highlighter-rouge">write_range()</code> function gets a resource structure and checks if the page is the same as the page size or it needs to be padded. It then calls the <code class="highlighter-rouge">write_vaddr()</code> function which in turn calls the <code class="highlighter-rouge">write_vaddr_tcp()</code> or the <code class="highlighter-rouge">write_vaddr_disk()</code> function based on how the memory is to be stored.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="k">if</span> <span class="p">(</span><span class="n">no_overlap</span><span class="p">)</span> <span class="p">{</span>
+                <span class="n">copy_page</span><span class="p">(</span><span class="n">vpage</span><span class="p">,</span> <span class="n">v</span><span class="p">);</span>
+                <span class="n">s</span> <span class="o">=</span> <span class="n">write_vaddr</span><span class="p">(</span><span class="n">vpage</span><span class="p">,</span> <span class="n">is</span><span class="p">);</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="n">s</span> <span class="o">=</span> <span class="n">write_vaddr</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">is</span><span class="p">);</span>
+            <span class="p">}</span>
+
+</code></pre></div></div>
+<p>^ Code from <code class="highlighter-rouge">write_range()</code> function</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* Run deflate() on input until output buffer is not full. */</span>
+        <span class="k">do</span> <span class="p">{</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="n">try_write</span><span class="p">(</span><span class="n">deflate_page_buf</span><span class="p">,</span> <span class="n">deflate</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">is</span><span class="p">));</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">ret</span><span class="p">;</span>
+        <span class="p">}</span> <span class="k">while</span> <span class="p">(</span><span class="n">ret</span> <span class="o">==</span> <span class="n">PAGE_SIZE</span><span class="p">);</span>
+</code></pre></div></div>
+<p>^ Code from <code class="highlighter-rouge">write_vaddr()</code> function</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="n">ret</span> <span class="o">=</span> <span class="n">RETRY_IF_INTERRUPTED</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">method</span> <span class="o">==</span> <span class="n">LIME_METHOD_TCP</span><span class="p">)</span> <span class="o">?</span> <span class="n">write_vaddr_tcp</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">is</span><span class="p">)</span> <span class="o">:</span> <span class="n">write_vaddr_disk</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">is</span><span class="p">)</span>
+    <span class="p">);</span>
+</code></pre></div></div>
+<p>^ Code from <code class="highlighter-rouge">try_write()</code></p>
+
+<p>I spent like 5 hours analyzing all the code ( I have never made a Kernel module before) and then realized that “The Art of Memory Forensics” has already explained the code in its notes section. Currently reconsidering life decisions. Send help!</p>
+
+<h2 id="memory-extraction">Memory Extraction:</h2>
+
+<h3 id="obtaining-the-kernel-config">Obtaining the kernel config:</h3>
+
+<p>So getting the kernel config sounded super easy when looking at the lime documentation but it actually turned out much harder than I expected.</p>
+
+<p>So this is what the lime documentation has to say about obtaining the kernel config</p>
+
+<p>Installed the prerequisites, downloaded the NDK from <a href="https://github.com/android/ndk/wiki/Unsupported-Download">here</a> and downloaded the SDK and kernel from official android source. I just created a file with all of the paths just so the I can source it from there every time. My source file looked something like this…</p>
+
+<p><img src="/assets/images/posts/2020/exports.png" alt="exports" /></p>
+
+<p>We must then retrieve and copy the kernel config from our device. As per the LiME docs,</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd</span> <span class="nv">$SDK_PATH</span>/platform-tools
+./adb pull /proc/config.gz
+<span class="nb">gunzip</span> ./config.gz
+<span class="nb">cp </span>config <span class="nv">$KSRC_PATH</span>/.config
+</code></pre></div></div>
+<p>Simple enough… So lets try that..</p>
+
+<p>Hmm… Thats strange… That file does not exist… *<em>Spends 30 mins spell checking and finds nothing</em>*</p>
+
+<p>So time to Google…</p>
+
+<p>I found out that only kernels that are configured with the <code class="highlighter-rouge">CONFIG_IKCONFIG</code> or the <code class="highlighter-rouge">CONFIG_IKCONFIG_PROC</code> ( Which are usually not enabled by default ) are enabled will have the the config available in /proc/config.gz.</p>
+
+<p>Some phones also have the config.gz stored in /vendor/kernel so be sure to check that out too.</p>
+
+<p>I also find that devices which have CWM (clockworkmod) have that configuration enabled by default. It’s kind of hard to assume that the suspect who I want to analyze is the same amount of a nerd I am and has modded his phone. Apparently some Xperia phones and a lot of Huawei phones also have it enabled by default. So if that’s what you have to analyze you are in luck. Must. Be. Nice.</p>
+
+<p>Okay, this is going to be a little more complicated than I initially thought it would be…</p>
+
+<p>At this point I should have just built the config file myself from the kernel source but I wanted to take the easy way out and just find a way to get it from the device. My argument was that “Hey, that will be the most accurate config file”. The problem with that argument was that I am using a Nexus device and that is almost always going to be built on the default config.</p>
+
+<p>So I tried using the method that is mentioned in <a href="https://jiafei427.wordpress.com/2016/11/01/how-to-extract-kernel-configuration-from-android-kernel-or-boot-img-and-build-related-kernel-for-the-device/">this article</a> to extract the kernel image from the device and then use the extract-ikconfig.sh found in scripts/ folder.</p>
+
+<p>// Fun fact… U can just get the zImage of the kernel directly from android source.</p>
+
+<p>After years of struggling I managed to obtain the boot.img file and extract the kernel image from that. Its finally time to use the script and get the kernel config.</p>
+
+<p><img src="/assets/images/posts/2020/extract_ikconfig.png" alt="extract-ikconfig terminal" /></p>
+
+<p>Well that did not go as expected… <em>Spends some more years making sure that he did everything right</em></p>
+
+<p>Well there is no way there is another config setting for this right? RIGHT?</p>
+
+<p><img src="/assets/images/posts/2020/extract_ikconf.png" alt="Extract IKconf" /></p>
+
+<p><img src="https://media.giphy.com/media/5saWnCIJL7nmU/source.gif" alt="gif" /></p>
+
+<p><em>Finally accepts his fate and compiles the config from the source code.</em></p>
+
+<p>These are the commands I used from the source directory:</p>
+
+<pre><code class="language-shell">
+export ARCH=arm
+export SUBARCH=armexport
+CROSS_COMPILE=$CC_PATH/arm-linux-androideabi-
+
+make hammerhead_defconfig
+</code></pre>
+
+<p>Now that I finally have the .config file I can follow the LiME docs again to finish my work.</p>
+
+<p>Okay, I just have to make changed to the Makefile(as per the LiME docs) and run make. Seems simple enough.</p>
+
+<p>I did not take a screen shot of the error but this is the error message I got:</p>
+
+<p>“The present kernel configuration has modules disabled.Type ‘make config’ and enable loadable module support.Then build a kernel with module support enabled
+make:  [modules] Error 1”</p>
+
+<p>I found the solution from a similar blog post to the one I am making. Wait someone already did all this work??? AHHHHHHH.</p>
+
+<p>You can find the post <a href="https://sgros-students.blogspot.com/2014/04/lime.html">here</a></p>
+
+<p>I just had make changes to the config file and add the following lines.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>CONFIG_MODULES=y
+CONFIG_MODULE_UNLOAD=y
+</code></pre></div></div>
+
+<p>*<em>At this point I was honestly just happy to find a solution and didnt really think about what the solution did but I later realized a very big problem that I had</em>*</p>
+
+<p>Well that worked and I obtained a lime.ko file.</p>
+
+<p>Again following the LiME docs I did the following commands to push my .ko file to the device and the load the kernel module.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>adb push lime.ko /sdcard/lime.ko
+adb forward tcp:4444 tcp:4444
+adb shell
+su
+<span class="c"># insmod /sdcard/lime.ko “path=tcp:4444 format=lime”</span>
+</code></pre></div></div>
+
+<p><img src="/assets/images/posts/2020/insmod.png" alt="insmod terminal image here" /></p>
+
+<p>Wait that’s not right… There is no way it’s a config problem again right? RIGHT?</p>
+
+<p><img src="/assets/images/posts/2020/kernel_config.png" alt="Android kernel config page" /></p>
+
+<p>Obviously if I had noticed what changes I am adding to the config file when making lime.ko I would have realized that for android to accept LKM it has to have those config options enabled which wasnt in the default config and obviously wouldn’t in the actual device.</p>
+
+<p>The only method I can see working now is to flash a custom kernel with those configs enabled but that would require a reboot which kind of makes a large part of why I am doing this go down the drain.</p>
+
+<p>So I shall end this post here. I may make another blog on playing around with volatility with an android memory capture just to see all the information that I could gain.</p>
+
+:ET
